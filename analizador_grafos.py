@@ -71,10 +71,20 @@ class GrafoApp:
         )
         btn_validar.pack(side=tk.LEFT, padx=15)
 
+        btn_hamiltoniano = tk.Button(
+            frame_botones, text="Buscar Ciclo Hamiltoniano",
+            command=self.buscar_ciclo_hamiltoniano,
+            bg="#8E44AD", fg="white", font=("Segoe UI", 10, "bold"),
+            padx=12, pady=4, relief=tk.FLAT
+        )
+        btn_hamiltoniano.pack(side=tk.LEFT, padx=15)
+
         self.label_estado = tk.Label(
             frame_botones, text="Nodos: 0   |   Aristas: 0",
             font=("Segoe UI", 10), fg="#2C3E50"
         )
+        self.label_estado.pack(side=tk.RIGHT, padx=20)
+
     def on_click_canvas(self, event):
         nodo_clicado = self._obtener_nodo_en_posicion(event.x, event.y)
 
@@ -191,6 +201,73 @@ class GrafoApp:
             messagebox.showinfo("Resultado", "El grafo es CONEXO.")
         else:
             messagebox.showwarning("Resultado", "El grafo NO es conexo.")
+
+    def _buscar_ciclo_hamiltoniano_backtracking(self, ids_nodos):
+        n = len(ids_nodos)
+        nodo_inicio = ids_nodos[0]
+
+        camino = [nodo_inicio]
+        visitados = {nodo_inicio}
+
+        def backtrack():
+            if len(camino) == n:
+                ultimo = camino[-1]
+                if nodo_inicio in self.lista_adyacencia.get(ultimo, set()):
+                    return True
+                return False
+
+            ultimo = camino[-1]
+            for vecino in self.lista_adyacencia.get(ultimo, set()):
+                if vecino not in visitados:
+                    camino.append(vecino)
+                    visitados.add(vecino)
+
+                    if backtrack():
+                        return True
+                    camino.pop()
+                    visitados.remove(vecino)
+            return False
+        if backtrack():
+            return camino + [nodo_inicio]
+        return None
+
+    def buscar_ciclo_hamiltoniano(self):
+        if len(self.nodos) == 0:
+            messagebox.showwarning(
+                "Grafo vacío",
+                "No hay nodos en el canvas. Agrega al menos un nodo."
+            )
+            return
+        if not self.es_conexo():
+            messagebox.showerror(
+                "Grafo no conexo",
+                "El grafo debe ser conexo para poder buscar un Ciclo Hamiltoniano.\n"
+                "Conecta todos los nodos y vuelve a intentarlo."
+            )
+            return
+        if len(self.nodos) < 3:
+            messagebox.showwarning(
+                "Nodos insuficientes",
+                "Se necesitan al menos 3 nodos para formar un Ciclo Hamiltoniano."
+            )
+            return
+
+        ids_nodos = list(self.nodos.keys())
+        resultado = self._buscar_ciclo_hamiltoniano_backtracking(ids_nodos)
+
+        if resultado is not None:
+            etiquetas = [self.nodos[id_nodo].etiqueta for id_nodo in resultado]
+            secuencia_texto = " -> ".join(etiquetas)
+            messagebox.showinfo(
+                "Ciclo Hamiltoniano encontrado",
+                f"Se encontró un Ciclo Hamiltoniano:\n\n{secuencia_texto}"
+            )
+        else:
+            messagebox.showwarning(
+                "Sin Ciclo Hamiltoniano",
+                "El grafo NO posee un Ciclo Hamiltoniano."
+            )
+
 def main():
     root = tk.Tk()
     app = GrafoApp(root)
